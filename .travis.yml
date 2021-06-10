@@ -1,0 +1,38 @@
+dist: bionic
+language: python
+python:
+  - "3.9"
+
+services:
+  - docker
+
+before_install:
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  - sudo apt-get update
+  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+
+install:
+  - python -m pip install docker
+  - docker-compose up --build -d
+
+before_script:
+  - python postgres_monitor.py
+  - docker exec -it django python manage.py makemigrations
+  - docker exec -it django python manage.py migrate
+
+script:
+  - docker exec -it django pytest --ds=lift.settings --cov
+  - docker cp django:code/.coverage ./
+  - sed -i "s@\"/code/@\"${PWD}/@g" .coverage
+
+after_success:
+  - python -m pip install coveralls==1.8.2
+  - coveralls
+
+deploy:
+  skip_cleanup: true
+  provider: script
+  script: python build_lift_container.py --repo $docker_repo --user $docker_username --passwd $docker_password
+  on:
+    branch: release
