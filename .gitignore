@@ -4,6 +4,7 @@
 *.pyc
 __pycache__/
 staticfiles
+static
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
